@@ -1,5 +1,7 @@
 # Application-Oriented Performance Benchmarks for Quantum Computing
 
+#### Note: This branch was preserved on 22 March 2024 to support Qiskit versions <= 0.46 --- Qiskit 1.0 removed many deprecated packges, classes, and functions resulting in this branch not working with 1.0.  Changes that have been made to the master branch require Qiskit 1.0 or greater.
+
 This repository contains a collection of prototypical application- or algorithm-centric benchmark programs designed for the purpose of characterizing the end-user perception of the performance of current-generation Quantum Computers.
 
 The repository is maintained by members of the Quantum Economic Development Consortium (QED-C) Technical Advisory Committee on Standards and Performance Metrics (Standards TAC).
