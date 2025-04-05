@@ -686,41 +686,46 @@ def run(min_qubits: int = 2,
                 # special case for CUDA Q Observables
                 elif api == "cudaq":
                     if group_method != "SpinOperator":
-                                print("... executing circuits via sampling, without using CUDA-Q Observe.")
-                                # Generate circuits for each Pauli term
-                                pauli_term_groups, pauli_str_list = observables.group_pauli_terms_for_execution(
-                                    num_qubits, sparse_pauli_terms, False
-                                )
-                                
-                                circuits = hamlib_simulation_kernel.create_circuits_for_pauli_terms(
-                                    qc, num_qubits, pauli_str_list
-                                ) # qc is an array with the kernel and dependent parameters
+                        print(f"... executing circuits via sampling, without using CUDA-Q Observe, group_method = {group_method}")
+                        # Generate circuits for each Pauli term
+                        pauli_term_groups, pauli_str_list = observables.group_pauli_terms_for_execution(
+                            num_qubits, sparse_pauli_terms,
+                            True if group_method is not None else False
+                        )
+                        
+                        num_circuits_to_execute = len(pauli_term_groups)
+                        
+                        circuits = hamlib_simulation_kernel.create_circuits_for_pauli_terms(
+                            qc, num_qubits, pauli_str_list
+                        ) # qc is an array with the kernel and dependent parameters
+                        
+                        print(f"... number of circuits to execute: {len(circuits)}")
 
-                                if verbose:
-                                    for circuit, group in zip(circuits, pauli_term_groups):
-                                        print(group)
+                        if verbose:
+                            for circuit, group in zip(circuits, pauli_term_groups):
+                                print(group)
 
-                                # Execute circuits
-                                if not distribute_shots:
-                                    print(f"... number of shots per circuit = {int(num_shots / len(circuits))}")
-                                    results = execute_circuits(
-                                        backend_id=backend_id,
-                                        circuits=circuits,
-                                        num_shots=int(num_shots / len(circuits)),
-                                    )
-                                else:
-                                    results, pauli_term_groups = execute_circuits_distribute_shots(
-                                        backend_id=backend_id,
-                                        circuits=circuits,
-                                        num_shots=num_shots,
-                                        groups=pauli_term_groups,
-                                    )
+                        # Execute circuits
+                        if not distribute_shots:
+                            print(f"... number of shots per circuit = {int(num_shots / len(circuits))}")
+                            results = execute_circuits(
+                                backend_id=backend_id,
+                                circuits=circuits,
+                                num_shots=int(num_shots / len(circuits)),
+                            )
+                        else:
+                            results, pauli_term_groups = execute_circuits_distribute_shots(
+                                backend_id=backend_id,
+                                circuits=circuits,
+                                num_shots=num_shots,
+                                groups=pauli_term_groups,
+                            )
 
-                                # Compute total energy from measurements
-                                total_energy, term_contributions = observables.calculate_expectation_from_measurements(
-                                    num_qubits, results, pauli_term_groups
-                                )
-                                total_energy = np.real(total_energy)
+                        # Compute total energy from measurements
+                        total_energy, term_contributions = observables.calculate_expectation_from_measurements(
+                            num_qubits, results, pauli_term_groups
+                        )
+                        total_energy = np.real(total_energy)
 
                     else:
                         #print("... using CUDA Q Observe.")
@@ -898,11 +903,15 @@ def execute_circuits(
 
     # if backend_id == "nvidia":
     if api_ == "cudaq":
-        results = []
+        counts_array = []
         for circuit in circuits:
             result = ex.execute_circuit_immed(circuit, num_shots)
-            results.append(result.get_counts())
-        results = ExecResult(results)
+            counts_array.append(result.get_counts())
+        
+        if len(counts_array) < 2:
+            results = ExecResult(counts_array[0])
+        else:
+            results = ExecResult(counts_array)
 
     # Set up the backend for execution
     elif backend_id == "qasm_simulator" or backend_id == "statevector_simulator":
